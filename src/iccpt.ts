@@ -21,14 +21,14 @@ export default class Project {
     return row;
   }
 
-  createScore(id: string, initValue: number = 0, params: Partial<Point> = {}) {
+  addScoreType(id: string, initValue: number = 0, params: Partial<Point> = {}) {
     const point = new Point(id, initValue);
     Object.assign(point, params);
     this.pointTypes.push(point);
     return point;
   }
 
-  notImplemented(params: any) {
+  add(params: any) {
     Object.assign(this, params);
     return this;
   }
@@ -74,6 +74,11 @@ export class Row {
   constructor(param: Partial<Row>) {
     const { requireds, ...rest } = param;
 
+    if (!rest.titleText && rest.text) {
+      rest.titleText = rest.text;
+      rest.text = undefined;
+    }
+
     if (param.requireds instanceof Requires) {
       this.requireds = param.requireds.childs;
     }
@@ -91,7 +96,7 @@ export class Row {
     return this;
   }
 
-  notImplemented(params: any) {
+  add(params: any) {
     Object.assign(this, params);
     return this;
   }
@@ -145,7 +150,7 @@ export class Choice {
       id: typeof pointObj === "string" ? pointObj : pointObj.id,
       value: value,
     });
-    score.notImplemented(params);
+    score.add(params);
 
     this.scores.push(score);
 
@@ -163,7 +168,7 @@ export class Choice {
     return addon;
   }
 
-  notImplemented(params: any) {
+  add(params: any) {
     Object.assign(this, params);
     return this;
   }
@@ -219,7 +224,7 @@ export class Score {
     return this;
   }
 
-  notImplemented(params: any) {
+  add(params: any) {
     Object.assign(this, params);
     return this;
   }
@@ -255,7 +260,7 @@ export class Point {
     this.initValue = initValue;
   }
 
-  notImplemented(params: any) {
+  add(params: any) {
     Object.assign(this, params);
     return this;
   }
@@ -349,6 +354,7 @@ export class Requires {
     return JSON.stringify(this.childs);
   }
 }
+// TODO: group requirements
 
 export class Require {
   required: boolean = true;
@@ -375,7 +381,7 @@ export class Require {
     Object.assign(this, param);
   }
 
-  notImplemented(params: any) {
+  add(params: any) {
     Object.assign(this, params);
     return this;
   }

@@ -74,6 +74,7 @@ function requiredsToScriptString(
           );
       }
     } else if (type === "or" || type === "gid") {
+      // Lazy implementation - xOfTheseMet, nxOfTheseMet, group requirements are not implemented yet
       differentParams.type = type;
       result +=
         `.add(new Require(${JSON.stringify(differentParams)}))\n\t`.replace(
@@ -93,7 +94,7 @@ function requiredsToScriptString(
 }
 
 // Get arg
-const args = process.argv.slice(2);
+const args = process.argv.slice(3);
 if (args.length < 1) {
   console.error("Please provide the path to the project.json file.");
   process.exit(1);
@@ -102,12 +103,13 @@ if (args.length < 1) {
 // Target file path from args
 const inputFile = args[0];
 const outputFile = args[1] || "./translated_project.ts";
+const outputJSONFile = args[2] || "./translated_generated.json";
 
 // Initialize project
 const project = JSON.parse(fs.readFileSync(inputFile, "utf-8"));
 
 let result: string = `
-// Auto-generated file, might be inaccurate, Please keep the original Project.json file.
+// Auto-generated file, might be inaccurate. Please keep the original Project.json file.
 import Project from "./src/iccpt.ts";
 import { Requires, Require } from "./src/iccpt.ts";
 import fs from "fs";
@@ -129,7 +131,7 @@ for (const key in project) {
     continue;
   }
 
-  result += `project.notImplemented({ ${key}: ${JSON.stringify(project[key])} }); // Missing\n`;
+  result += `project.add({ ${key}: ${JSON.stringify(project[key])} }); // Missing\n`;
 }
 
 // Handle pointTypes
@@ -153,7 +155,7 @@ if (project.pointTypes && project.pointTypes.length > 0) {
     }
     const pointVarName = cleanVarName(`point_${id}`);
 
-    result += `\nconst ${pointVarName} = project.createScore("${id}", ${initValue}, ${JSON.stringify(param)});`;
+    result += `\nconst ${pointVarName} = project.addScoreType("${id}", ${initValue}, ${JSON.stringify(param)});`;
   }
 }
 
@@ -197,7 +199,7 @@ for (const row of project.rows) {
   if (Object.keys(missingParams).length > 0) {
     result += `${varname}`;
     for (const key in missingParams) {
-      result += `.notImplemented({ ${key}: ${JSON.stringify(missingParams[key])} })\n\t`;
+      result += `.add({ ${key}: ${JSON.stringify(missingParams[key])} })\n\t`;
     }
     result = result.trimEnd() + ";\n";
   }
@@ -318,7 +320,7 @@ for (const row of project.rows) {
           if (Object.keys(missingAddonParams).length > 0) {
             result += `${addonVarName}`;
             for (const key in missingAddonParams) {
-              result += `.notImplemented({ ${key}: ${JSON.stringify(missingAddonParams[key])} })\n\t`;
+              result += `.add({ ${key}: ${JSON.stringify(missingAddonParams[key])} })\n\t`;
             }
             result = result.trimEnd() + ";\n";
           }
@@ -331,7 +333,7 @@ for (const row of project.rows) {
       if (Object.keys(missingChoiceParams).length > 0) {
         result += `${choiceVarName}`;
         for (const key in missingChoiceParams) {
-          result += `.notImplemented({ ${key}: ${JSON.stringify(missingChoiceParams[key])} })\n\t`;
+          result += `.add({ ${key}: ${JSON.stringify(missingChoiceParams[key])} })\n\t`;
         }
         result = result.trimEnd() + ";\n";
       }
@@ -343,7 +345,7 @@ for (const row of project.rows) {
 result += `
 // Save the project into json file
 const jsonString = JSON.stringify(project);
-fs.writeFileSync("translated_generated.json", jsonString);
+fs.writeFileSync("${outputJSONFile}", jsonString);
 `;
 
 // Save the result into output file
