@@ -162,7 +162,7 @@ export class Choice {
     return this;
   }
 
-  addAddon(param: any) {
+  addAddon(param: Partial<Addon>) {
     const addon = new Addon(param, this.id);
     this.addons.push(addon);
     return addon;
@@ -210,6 +210,12 @@ export class Score {
   useExpression?: boolean = false;
   expValue?: string = "";
 
+  // TODO: might be only used in older ICC version.
+  isActive?: any;
+  setValue?: any;
+  discountIsOn?: any;
+  discountShow?: any;
+
   constructor(param: Partial<Score>) {
     const { requireds, ...rest } = param;
 
@@ -252,8 +258,8 @@ export class Point {
   plussOrMinusInverted: boolean = false;
 
   pointColorsIsOn: boolean = false;
-  positiveColor?: string = undefined; // Hex color string
-  negativeColor?: string = undefined; // Hex color string
+  positiveColor?: string | any = undefined; // Hex color string | ICC color object
+  negativeColor?: string | any = undefined; // Hex color string | ICC color object
 
   constructor(id: string, initValue: number = 0) {
     this.id = id;
