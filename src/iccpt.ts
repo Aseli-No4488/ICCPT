@@ -369,6 +369,10 @@ export class Requires {
     return this;
   }
 
+  ToRequireArray(): Require[] {
+    return this.childs;
+  }
+
   ToJSON() {
     return JSON.stringify(this.childs);
   }

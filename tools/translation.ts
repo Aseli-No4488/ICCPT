@@ -11,6 +11,21 @@ const requiredTemplate = new Require({});
 const pointTemplate = new Score({});
 const addonTemplate = new Row({}).addChoice({}).addAddon({});
 
+function orRequiredToRequireds(
+  orRequired: any[],
+  require: boolean = true,
+): Require[] {
+  let requiresArray: Array<Require> = [];
+  for (let r of orRequired) {
+    if (require) {
+      requiresArray.push(new Requires().select(r.req).ToRequireArray()[0]);
+    } else {
+      requiresArray.push(new Requires().nselect(r.req).ToRequireArray()[0]);
+    }
+  }
+  return requiresArray;
+}
+
 function requiredsToScriptString(
   requireds: Require[] | any[],
   reqVarName: string = "req_" + randomChars(8),
@@ -21,86 +36,95 @@ function requiredsToScriptString(
   if (!_skipConstVarName) result += `\nconst ${reqVarName} = `;
   result += "new Requires()";
 
-  for (const r of requireds) {
-    const { id, type, operator, reqId, reqId1, required, ...params } = r;
+  try {
+    for (const r of requireds) {
+      const { id, type, operator, reqId, reqId1, required, ...params } = r;
 
-    // Find operator string from OperatorMap
-    const operatorStr = Object.keys(OperatorMap).find(
-      (key) => OperatorMap[key as keyof typeof OperatorMap] === operator,
-    );
+      // Find operator string from OperatorMap
+      const operatorStr = Object.keys(OperatorMap).find(
+        (key) => OperatorMap[key as keyof typeof OperatorMap] === operator,
+      );
 
-    //
-    let differentParams: any = {};
-    for (const key in params) {
-      if (!requiredTemplate.hasOwnProperty(key)) {
-        differentParams[key] = params[key as keyof typeof params];
-        continue;
+      //
+      let differentParams: any = {};
+      for (const key in params) {
+        if (!requiredTemplate.hasOwnProperty(key)) {
+          differentParams[key] = params[key as keyof typeof params];
+          continue;
+        }
+        if (
+          JSON.stringify(
+            requiredTemplate[key as keyof typeof requiredTemplate],
+          ) !== JSON.stringify(params[key as keyof typeof params])
+        ) {
+          differentParams[key] = params[key as keyof typeof params];
+        }
       }
-      if (
-        JSON.stringify(
-          requiredTemplate[key as keyof typeof requiredTemplate],
-        ) !== JSON.stringify(params[key as keyof typeof params])
-      ) {
-        differentParams[key] = params[key as keyof typeof params];
-      }
-    }
 
-    if (type === "points") {
-      const pointVarName = cleanVarName(`point_${reqId}`);
+      if (type === "points") {
+        const pointVarName = cleanVarName(`point_${reqId}`);
 
-      result +=
-        `.point(${pointVarName}, "${operatorStr}", ${r.reqPoints}, ${JSON.stringify(differentParams)})\n\t`.replace(
-          ", {}",
-          "",
-        );
-    } else if (type === "pointCompare") {
-      const pointVarName1 = cleanVarName(`point_${reqId}`);
-      const pointVarName2 = cleanVarName(`point_${reqId1}`);
-
-      result +=
-        `.pointCompare(${pointVarName1}, "${operatorStr}", ${pointVarName2}, ${JSON.stringify(differentParams)})\n\t`.replace(
-          ", {}",
-          "",
-        );
-    } else if (type === "id") {
-      if (required) {
         result +=
-          `.select("${reqId}", ${JSON.stringify(differentParams)})\n\t`.replace(
+          `.point(${pointVarName}, "${operatorStr}", ${r.reqPoints}, ${JSON.stringify(differentParams)})\n\t`.replace(
+            ", {}",
+            "",
+          );
+      } else if (type === "pointCompare") {
+        const pointVarName1 = cleanVarName(`point_${reqId}`);
+        const pointVarName2 = cleanVarName(`point_${reqId1}`);
+
+        result +=
+          `.pointCompare(${pointVarName1}, "${operatorStr}", ${pointVarName2}, ${JSON.stringify(differentParams)})\n\t`.replace(
+            ", {}",
+            "",
+          );
+      } else if (type === "id") {
+        if (required) {
+          result +=
+            `.select("${reqId}", ${JSON.stringify(differentParams)})\n\t`.replace(
+              ", {}",
+              "",
+            );
+        } else {
+          result +=
+            `.nselect("${reqId}", ${JSON.stringify(differentParams)})\n\t`.replace(
+              ", {}",
+              "",
+            );
+        }
+      } else if (type === "or") {
+        const requiresStr = requiredsToScriptString(
+          params["requireds"].length > 0
+            ? params["requireds"]
+            : orRequiredToRequireds(params["orRequired"]),
+          "",
+          true,
+        );
+        result += ".";
+        if (!required) result += "n";
+
+        if (params["requireds"].length > 0) delete differentParams.requireds;
+        else delete differentParams.orRequired;
+
+        delete differentParams.orNum;
+        result +=
+          `xOfTheseMet(${requiresStr.replaceAll(";", "")}, ${params.orNum}, ${JSON.stringify(differentParams)})\n\t`.replace(
             ", {}",
             "",
           );
       } else {
+        // Lazy implementation - group requirements are not implemented yet (type === "gid")
+        console.log("Lazy implementation of requireds translation");
+        differentParams.type = type;
         result +=
-          `.nselect("${reqId}", ${JSON.stringify(differentParams)})\n\t`.replace(
+          `.add(new Require(${JSON.stringify(differentParams)}))\n\t`.replace(
             ", {}",
             "",
           );
       }
-    } else if (type === "or") {
-      const requiresStr = requiredsToScriptString(
-        params["requireds"],
-        "",
-        true,
-      );
-      result += ".";
-      if (!required) result += "n";
-      delete differentParams.requireds;
-      delete differentParams.orNum;
-      result +=
-        `xOfTheseMet(${requiresStr.replaceAll(";", "")}, ${params.orNum}, ${JSON.stringify(differentParams)})\n\t`.replace(
-          ", {}",
-          "",
-        );
-    } else {
-      // Lazy implementation - group requirements are not implemented yet (type === "gid")
-      console.log("Lazy implementation of requireds translation");
-      differentParams.type = type;
-      result +=
-        `.add(new Require(${JSON.stringify(differentParams)}))\n\t`.replace(
-          ", {}",
-          "",
-        );
     }
+  } catch (e) {
+    console.log("ERR", requireds);
   }
 
   if (
