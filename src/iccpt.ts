@@ -337,10 +337,15 @@ export class Requires {
 
     return this;
   }
-  xOfTheseMet(requires: Require[], num: number, params: Partial<Require> = {}) {
+  xOfTheseMet(
+    requires: Require[] | Requires,
+    num: number,
+    params: Partial<Require> = {},
+  ) {
+    if (requires instanceof Requires) requires = requires.childs;
     const require = new Require({
       type: "or",
-      orRequireds: requires,
+      requireds: requires,
       orNum: num,
       ...params,
     });
@@ -348,13 +353,14 @@ export class Requires {
     return this;
   }
   nxOfTheseMet(
-    requires: Require[],
+    requires: Require[] | Requires,
     num: number,
     params: Partial<Require> = {},
   ) {
+    if (requires instanceof Requires) requires = requires.childs;
     const require = new Require({
       type: "or",
-      orRequireds: requires,
+      requireds: requires,
       orNum: num,
       required: false,
       ...params,
@@ -371,9 +377,9 @@ export class Requires {
 
 export class Require {
   required: boolean = true;
-  requireds: any[] = [];
-  orRequired: any[] = [{ req: "" }, { req: "" }, { req: "" }, { req: "" }];
-  orRequireds: any[] = [];
+  requireds: Require[] | Requires | any[] = [];
+  orRequired: Require[] | Requires | any[] = [];
+  orRequireds: any[] = []; // TODO: what is this
   id: string = "";
   type: RequireType = "id";
   reqId: string = "";

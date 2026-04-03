@@ -12,10 +12,14 @@ const pointTemplate = new Score({});
 const addonTemplate = new Row({}).addChoice({}).addAddon({});
 
 function requiredsToScriptString(
-  requireds: Require[],
+  requireds: Require[] | any[],
   reqVarName: string = "req_" + randomChars(8),
+  _skipConstVarName: boolean = false,
 ) {
-  let result = `\nconst ${reqVarName} = new Requires()`;
+  let result = "";
+
+  if (!_skipConstVarName) result += `\nconst ${reqVarName} = `;
+  result += "new Requires()";
 
   for (const r of requireds) {
     const { id, type, operator, reqId, reqId1, required, ...params } = r;
@@ -43,7 +47,6 @@ function requiredsToScriptString(
 
     if (type === "points") {
       const pointVarName = cleanVarName(`point_${reqId}`);
-      // console.log(pointVarName, operatorStr, operator);
 
       result +=
         `.point(${pointVarName}, "${operatorStr}", ${r.reqPoints}, ${JSON.stringify(differentParams)})\n\t`.replace(
@@ -73,8 +76,24 @@ function requiredsToScriptString(
             "",
           );
       }
-    } else if (type === "or" || type === "gid") {
-      // Lazy implementation - xOfTheseMet, nxOfTheseMet, group requirements are not implemented yet
+    } else if (type === "or") {
+      const requiresStr = requiredsToScriptString(
+        params["requireds"],
+        "",
+        true,
+      );
+      result += ".";
+      if (!required) result += "n";
+      delete differentParams.requireds;
+      delete differentParams.orNum;
+      result +=
+        `xOfTheseMet(${requiresStr.replaceAll(";", "")}, ${params.orNum}, ${JSON.stringify(differentParams)})\n\t`.replace(
+          ", {}",
+          "",
+        );
+    } else {
+      // Lazy implementation - group requirements are not implemented yet (type === "gid")
+      console.log("Lazy implementation of requireds translation");
       differentParams.type = type;
       result +=
         `.add(new Require(${JSON.stringify(differentParams)}))\n\t`.replace(
@@ -84,12 +103,17 @@ function requiredsToScriptString(
     }
   }
 
-  if (result === `\nconst ${reqVarName} = new Requires()`) {
+  if (
+    result === `\nconst ${reqVarName} = new Requires()` ||
+    result === "new Requires()"
+  ) {
     return "";
   }
 
   result = result.trimEnd() + ";\n";
 
+  if (_skipConstVarName)
+    result = result.replaceAll("\n", "").replaceAll("\t", "");
   return result;
 }
 
