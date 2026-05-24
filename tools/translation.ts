@@ -25,6 +25,13 @@ function orRequiredToRequireds(
   }
   return requiresArray;
 }
+function orRequiredsToRequireds(orRequired: any[]): Require[] {
+  let requiresArray: Array<Require> = [];
+  for (let r of orRequired) {
+    requiresArray.push(new Requires().add(new Require(r)).ToRequireArray()[0]);
+  }
+  return requiresArray;
+}
 
 function requiredsToScriptString(
   requireds: Require[] | any[],
@@ -93,18 +100,20 @@ function requiredsToScriptString(
             );
         }
       } else if (type === "or") {
-        const requiresStr = requiredsToScriptString(
-          params["requireds"].length > 0
-            ? params["requireds"]
-            : orRequiredToRequireds(params["orRequired"]),
-          "",
-          true,
-        );
+        let target;
+        if (params["requireds"].length > 0) {
+          target = params["requireds"];
+          delete differentParams.requireds;
+        } else if (params["orRequired"].length > 0) {
+          target = orRequiredToRequireds(params["orRequired"]);
+          delete differentParams.orRequired;
+        } else {
+          target = orRequiredsToRequireds(params["orRequireds"]);
+          delete differentParams.orRequireds;
+        }
+        const requiresStr = requiredsToScriptString(target, "", true);
         result += ".";
         if (!required) result += "n";
-
-        if (params["requireds"].length > 0) delete differentParams.requireds;
-        else delete differentParams.orRequired;
 
         delete differentParams.orNum;
         result +=
