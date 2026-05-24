@@ -10,9 +10,9 @@ export const OperatorMap = {
   "": "",
   ">": "1",
   ">=": "2",
-  "<": "3",
-  "<=": "4",
-  "==": "5",
+  "==": "3",
+  "<": "4",
+  "<=": "5",
 } as const;
 
 type Template = (typeof TemplateMap)[keyof typeof TemplateMap];
